@@ -1,4 +1,4 @@
-  services:
+ services:
     pockethost:
       image: node:20-alpine
       container_name: pockethost
@@ -26,11 +26,20 @@
           pnpm install --frozen-lockfile
 
           echo "Creating required directories..."
-          mkdir -p /data /home/pockethost/.pockethost
+          mkdir -p /data /home/pockethost/.pockethost /home/pockethost/.pockethost/ssl
 
-          echo "Starting PocketHost without SSL (Dokploy handles it)..."
+          echo "Generate temporary SSL certs for internal use..."
+          if [ ! -f "/home/pockethost/.pockethost/ssl/tls.key" ]; then
+            openssl req -x509 -newkey rsa:4096 \
+              -keyout /home/pockethost/.pockethost/ssl/tls.key \
+              -out /home/pockethost/.pockethost/ssl/tls.cert \
+              -days 365 -nodes \
+              -subj "/C=US/ST=State/L=City/O=JWLS/CN=*.store.jwls.co"
+          fi
+
+          echo "Starting PocketHost server..."
           cd /app/packages/pockethost
-          NODE_ENV=production tsx ./src/cli/index.ts edge daemon serve
+          NODE_ENV=production tsx ./src/cli/index.ts serve
         '
 
       volumes:
@@ -40,16 +49,14 @@
         - pockethost_home:/home/pockethost/.pockethost
 
       ports:
-        - "8090:8090"
-        - "3000:3000"
-        - "3001:80"
-        - "3443:443"
-        - "21:21"
-        - "10000-20000:10000-20000"
+        - "18090:8090"
+        - "13000:3000"
+        - "10021:21"
+        - "10000-11000:10000-11000"
 
       environment:
         APEX_DOMAIN: store.jwls.co
-        HTTP_PROTOCOL: "http:"
+        HTTP_PROTOCOL: "https:"
         MOTHERSHIP_NAME: pockethost-central
         MOTHERSHIP_ADMIN_USERNAME: admin@jwls.co
         MOTHERSHIP_ADMIN_PASSWORD: ChangeThisPassword123!
@@ -60,8 +67,23 @@
         DATA_ROOT: /data
         DAEMON_PORT: 3000
         DAEMON_PB_IDLE_TTL: 300000
+        PH_FTP_PORT: 21
+        PH_FTP_PASV_IP: 0.0.0.0
+        PH_FTP_PASV_PORT_MIN: 10000
+        PH_FTP_PASV_PORT_MAX: 11000
+        SSL_KEY: /home/pockethost/.pockethost/ssl/tls.key
+        SSL_CERT: /home/pockethost/.pockethost/ssl/tls.cert
         DOCKER_CONTAINER_HOST: host.docker.internal
         DEBUG: "false"
+        PH_DEBUG: "false"
+        TRACE: "false"
+
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 300s
 
   volumes:
     pockethost_app:
