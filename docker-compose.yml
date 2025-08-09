@@ -1,0 +1,63 @@
+  version: '3.8'
+
+  services:
+    pockethost:
+      build:
+        context: .
+        dockerfile: |
+          FROM node:20-alpine
+          RUN apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates
+          RUN npm install -g pnpm@9 tsx
+          WORKDIR /app
+          COPY . /app
+          RUN pnpm install --frozen-lockfile
+          RUN mkdir -p /home/pockethost/.pockethost/ssl /data
+          RUN openssl req -x509 -newkey rsa:4096 \
+              -keyout /home/pockethost/.pockethost/ssl/tls.key \
+              -out /home/pockethost/.pockethost/ssl/tls.cert \
+              -days 365 -nodes \
+              -subj "/C=US/ST=State/L=City/O=JWLS/CN=*.store.jwls.co"
+          CMD ["tsx", "packages/pockethost/src/cli/index.ts", "serve"]
+
+      container_name: pockethost
+      restart: unless-stopped
+      privileged: true
+
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - pockethost_data:/data
+        - pockethost_home:/home/pockethost/.pockethost
+
+      ports:
+        - "80:80"
+        - "443:443"
+        - "8090:8090"
+        - "3000:3000"
+        - "21:21"
+        - "10000-20000:10000-20000"
+
+      environment:
+        APEX_DOMAIN: store.jwls.co
+        HTTP_PROTOCOL: "https:"
+        MOTHERSHIP_NAME: pockethost-central
+        MOTHERSHIP_ADMIN_USERNAME: admin@jwls.co
+        MOTHERSHIP_ADMIN_PASSWORD: ${MOTHERSHIP_PASSWORD:-ChangeThisPassword123!}
+        MOTHERSHIP_PORT: 8090
+        MOTHERSHIP_SEMVER: "0.22.*"
+        NODE_ENV: production
+        PH_HOME: /home/pockethost/.pockethost
+        DATA_ROOT: /data
+        DAEMON_PORT: 3000
+        DAEMON_PB_IDLE_TTL: 300000
+        PH_FTP_PORT: 21
+        PH_FTP_PASV_IP: 0.0.0.0
+        PH_FTP_PASV_PORT_MIN: 10000
+        PH_FTP_PASV_PORT_MAX: 20000
+        SSL_KEY: /home/pockethost/.pockethost/ssl/tls.key
+        SSL_CERT: /home/pockethost/.pockethost/ssl/tls.cert
+        DOCKER_CONTAINER_HOST: host.docker.internal
+        DEBUG: "false"
+
+  volumes:
+    pockethost_data:
+    pockethost_home:
