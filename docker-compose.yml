@@ -23,7 +23,7 @@
 
           echo "Installing Node dependencies..."
           cd /app
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
 
           echo "Creating required directories..."
           mkdir -p /data /home/pockethost/.pockethost /home/pockethost/.pockethost/ssl
