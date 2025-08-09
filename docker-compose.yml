@@ -1,4 +1,4 @@
-  services:
+ services:
     pockethost:
       image: node:20-alpine
       container_name: pockethost
@@ -21,9 +21,9 @@
             cd /app && git pull origin main
           fi
 
-          echo "Installing Node dependencies..."
+          echo "Installing Node dependencies (without frozen lockfile)..."
           cd /app
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
 
           echo "Creating required directories..."
           mkdir -p /data /home/pockethost/.pockethost /home/pockethost/.pockethost/ssl
