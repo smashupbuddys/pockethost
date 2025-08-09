@@ -1,4 +1,4 @@
- services:
+  services:
     pockethost:
       image: node:20-alpine
       container_name: pockethost
@@ -8,37 +8,15 @@
 
       command: |
         sh -c '
-          echo "Installing system dependencies..."
-          apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates
-
-          echo "Installing Node.js global packages..."
-          npm install -g pnpm@9 tsx
-
-          echo "Cloning or updating PocketHost repository..."
-          if [ ! -d "/app/.git" ]; then
-            git clone https://github.com/pockethost/pockethost.git /app
-          else
-            cd /app && git pull origin main
-          fi
-
-          echo "Installing Node dependencies (without frozen lockfile)..."
-          cd /app
-          pnpm install --no-frozen-lockfile
-
-          echo "Creating required directories..."
-          mkdir -p /data /home/pockethost/.pockethost /home/pockethost/.pockethost/ssl
-
-          echo "Generate temporary SSL certs for internal use..."
-          if [ ! -f "/home/pockethost/.pockethost/ssl/tls.key" ]; then
-            openssl req -x509 -newkey rsa:4096 \
-              -keyout /home/pockethost/.pockethost/ssl/tls.key \
-              -out /home/pockethost/.pockethost/ssl/tls.cert \
-              -days 365 -nodes \
-              -subj "/C=US/ST=State/L=City/O=JWLS/CN=*.store.jwls.co"
-          fi
-
-          echo "Starting PocketHost server..."
-          cd /app/packages/pockethost
+          apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates && \
+          npm install -g pnpm@9 tsx && \
+          git clone https://github.com/pockethost/pockethost.git /app 2>/dev/null || (cd /app && git pull) && \
+          cd /app && \
+          pnpm install --no-frozen-lockfile && \
+          mkdir -p /data /home/pockethost/.pockethost/ssl && \
+          openssl req -x509 -newkey rsa:4096 -keyout /home/pockethost/.pockethost/ssl/tls.key -out /home/pockethost/.pockethost/ssl/tls.cert -days 365 -nodes -subj "/CN=*.store.jwls.co" 2>/dev/null ||
+  true && \
+          cd /app/packages/pockethost && \
           NODE_ENV=production tsx ./src/cli/index.ts serve
         '
 
@@ -55,32 +33,17 @@
         - "3000"
 
       environment:
-        APEX_DOMAIN: ${APEX_DOMAIN}
-        HTTP_PROTOCOL: ${HTTP_PROTOCOL}
-        MOTHERSHIP_NAME: ${MOTHERSHIP_NAME}
+        APEX_DOMAIN: store.jwls.co
+        HTTP_PROTOCOL: "https:"
+        MOTHERSHIP_NAME: pockethost-central
         MOTHERSHIP_ADMIN_USERNAME: ${MOTHERSHIP_ADMIN_USERNAME}
         MOTHERSHIP_ADMIN_PASSWORD: ${MOTHERSHIP_ADMIN_PASSWORD}
-        MOTHERSHIP_PORT: ${MOTHERSHIP_PORT}
-        MOTHERSHIP_SEMVER: "0.22.*"
-        NODE_ENV: ${NODE_ENV}
-        PH_HOME: ${PH_HOME}
-        DATA_ROOT: ${DATA_ROOT}
-        DAEMON_PORT: ${DAEMON_PORT}
-        DAEMON_PB_IDLE_TTL: ${DAEMON_PB_IDLE_TTL}
-        SSL_KEY: ${SSL_KEY}
-        SSL_CERT: ${SSL_CERT}
-        DOCKER_CONTAINER_HOST: ${DOCKER_CONTAINER_HOST}
-        MOTHERSHIP_CLOUDFLARE_API_TOKEN: ${MOTHERSHIP_CLOUDFLARE_API_TOKEN}
-        MOTHERSHIP_CLOUDFLARE_ZONE_ID: ${MOTHERSHIP_CLOUDFLARE_ZONE_ID}
-        MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID: ${MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID}
-        DEBUG: ${DEBUG}
-        PH_DEBUG: ${DEBUG}
-        TRACE: "false"
-
-  volumes:
-    pockethost_app:
-      driver: local
-    pockethost_data:
-      driver: local
-    pockethost_home:
-      driver: local
+        MOTHERSHIP_PORT: 8090
+        NODE_ENV: production
+        PH_HOME: /home/pockethost/.pockethost
+        DATA_ROOT: /data
+        DAEMON_PORT: 3000
+        SSL_KEY: /home/pockethost/.pockethost/ssl/tls.key
+        SSL_CERT: /home/pockethost/.pockethost/ssl/tls.cert
+        DOCKER_CONTAINER_HOST: host.docker.internal
+        DEBUG: "false"
