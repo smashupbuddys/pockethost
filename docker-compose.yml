@@ -46,82 +46,42 @@
         '
 
       volumes:
-        # Docker socket for managing containers
         - /var/run/docker.sock:/var/run/docker.sock
-        # Persistent application data
         - pockethost_app:/app
-        # Database and instance data
         - pockethost_data:/data
-        # PocketHost home directory
         - pockethost_home:/home/pockethost/.pockethost
 
       ports:
-        # HTTP
         - "80:80"
-        # HTTPS
         - "443:443"
-        # Mothership PocketBase Admin UI
         - "8090:8090"
-        # PocketHost API
         - "3000:3000"
-        # FTP
         - "21:21"
-        # FTP Passive Mode Range
         - "10000-20000:10000-20000"
 
       environment:
-        # Domain Configuration for store.jwls.co
         APEX_DOMAIN: store.jwls.co
         HTTP_PROTOCOL: "https:"
-
-        # Mothership (Central PocketBase) Configuration
         MOTHERSHIP_NAME: pockethost-central
         MOTHERSHIP_ADMIN_USERNAME: admin@jwls.co
-        MOTHERSHIP_ADMIN_PASSWORD: ChangeThisPassword123!  # CHANGE THIS!
+        MOTHERSHIP_ADMIN_PASSWORD: ChangeThisPassword123!
         MOTHERSHIP_PORT: 8090
         MOTHERSHIP_SEMVER: "0.22.*"
-
-        # Core Application Settings
         NODE_ENV: production
         PH_HOME: /home/pockethost/.pockethost
         DATA_ROOT: /data
-
-        # Daemon Configuration
         DAEMON_PORT: 3000
-        DAEMON_PB_IDLE_TTL: 300000  # 5 minutes in milliseconds
-
-        # FTP Configuration
+        DAEMON_PB_IDLE_TTL: 300000
         PH_FTP_PORT: 21
-        PH_FTP_PASV_IP: 0.0.0.0  # Change to your server's public IP for external FTP access
+        PH_FTP_PASV_IP: 0.0.0.0
         PH_FTP_PASV_PORT_MIN: 10000
         PH_FTP_PASV_PORT_MAX: 20000
-
-        # SSL Certificate Paths
         SSL_KEY: /home/pockethost/.pockethost/ssl/tls.key
         SSL_CERT: /home/pockethost/.pockethost/ssl/tls.cert
-
-        # Cloudflare Configuration (Required for custom domains feature)
-        # Get these from: https://dash.cloudflare.com/profile/api-tokens
-        MOTHERSHIP_CLOUDFLARE_API_TOKEN: ""  # Add your Cloudflare API token
-        MOTHERSHIP_CLOUDFLARE_ZONE_ID: ""    # Add your Cloudflare Zone ID
-        MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID: "" # Add your Cloudflare Account ID
-
-        # Discord Webhooks (Optional - for notifications)
-        DISCORD_HEALTH_CHANNEL_URL: ""
-        DISCORD_ALERT_CHANNEL_URL: ""
-        DISCORD_TEST_CHANNEL_URL: ""
-        DISCORD_STREAM_CHANNEL_URL: ""
-
-        # LemonSqueezy (Optional - for payments)
-        LS_WEBHOOK_SECRET: ""
-
-        # Email Configuration (Optional)
-        TEST_EMAIL: ""
-
-        # Docker Configuration
+        MOTHERSHIP_CLOUDFLARE_API_TOKEN: ""
+        MOTHERSHIP_CLOUDFLARE_ZONE_ID: ""
+        MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID: ""
         DOCKER_CONTAINER_HOST: host.docker.internal
-
-        # Debug Settings
         DEBUG: "false"
         PH_DEBUG: "false"
         TRACE: "false"
@@ -133,15 +93,6 @@
         retries: 5
         start_period: 300s
 
-      networks:
-        - pockethost_network
-
-  # Docker Networks
-  networks:
-    pockethost_network:
-      driver: bridge
-
-  # Docker Volumes
   volumes:
     pockethost_app:
       driver: local
