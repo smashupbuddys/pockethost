@@ -1,4 +1,4 @@
-  services:
+ services:
     pockethost:
       image: node:20-alpine
       container_name: pockethost
@@ -48,11 +48,11 @@
         - pockethost_data:/data
         - pockethost_home:/home/pockethost/.pockethost
 
-      ports:
-        - "28090:8090"
-        - "23000:3000"
-        - "20021:21"
-        - "30000-31000:10000-11000"
+      expose:
+        - "80"
+        - "443"
+        - "8090"
+        - "3000"
 
       environment:
         APEX_DOMAIN: ${APEX_DOMAIN}
@@ -67,10 +67,6 @@
         DATA_ROOT: ${DATA_ROOT}
         DAEMON_PORT: ${DAEMON_PORT}
         DAEMON_PB_IDLE_TTL: ${DAEMON_PB_IDLE_TTL}
-        PH_FTP_PORT: ${PH_FTP_PORT}
-        PH_FTP_PASV_IP: ${PH_FTP_PASV_IP}
-        PH_FTP_PASV_PORT_MIN: 10000
-        PH_FTP_PASV_PORT_MAX: 11000
         SSL_KEY: ${SSL_KEY}
         SSL_CERT: ${SSL_CERT}
         DOCKER_CONTAINER_HOST: ${DOCKER_CONTAINER_HOST}
@@ -80,13 +76,6 @@
         DEBUG: ${DEBUG}
         PH_DEBUG: ${DEBUG}
         TRACE: "false"
-
-      healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
-        start_period: 300s
 
   volumes:
     pockethost_app:
