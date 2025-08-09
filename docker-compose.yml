@@ -5,55 +5,24 @@
       restart: unless-stopped
       privileged: true
       working_dir: /app
-
       command: |
         sh -c '
-          echo "Installing system dependencies..."
-          apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates
-
-          echo "Installing Node.js global packages..."
-          npm install -g pnpm@9 tsx
-
-          echo "Cloning or updating PocketHost repository..."
-          if [ ! -d "/app/.git" ]; then
-            git clone https://github.com/pockethost/pockethost.git /app
-          else
-            cd /app && git pull origin main
-          fi
-
-          echo "Installing Node dependencies..."
-          cd /app
-          pnpm install --frozen-lockfile
-
-          echo "Creating required directories..."
-          mkdir -p /data /home/pockethost/.pockethost /home/pockethost/.pockethost/ssl
-
-          echo "Generate temporary SSL certs for internal use..."
-          if [ ! -f "/home/pockethost/.pockethost/ssl/tls.key" ]; then
-            openssl req -x509 -newkey rsa:4096 \
-              -keyout /home/pockethost/.pockethost/ssl/tls.key \
-              -out /home/pockethost/.pockethost/ssl/tls.cert \
-              -days 365 -nodes \
-              -subj "/C=US/ST=State/L=City/O=JWLS/CN=*.store.jwls.co"
-          fi
-
-          echo "Starting PocketHost server..."
-          cd /app/packages/pockethost
-          NODE_ENV=production tsx ./src/cli/index.ts serve
+          apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates && \
+          npm install -g pnpm@9 tsx && \
+          git clone https://github.com/pockethost/pockethost.git /app || (cd /app && git pull) && \
+          cd /app && pnpm install --frozen-lockfile && \
+          mkdir -p /data /home/pockethost/.pockethost/ssl && \
+          openssl req -x509 -newkey rsa:4096 -keyout /home/pockethost/.pockethost/ssl/tls.key -out /home/pockethost/.pockethost/ssl/tls.cert -days 365 -nodes -subj "/CN=*.store.jwls.co" && \
+          cd /app/packages/pockethost && NODE_ENV=production tsx ./src/cli/index.ts serve
         '
-
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
         - pockethost_app:/app
         - pockethost_data:/data
         - pockethost_home:/home/pockethost/.pockethost
-
       ports:
         - "18090:8090"
         - "13000:3000"
-        - "10021:21"
-        - "10000-11000:10000-11000"
-
       environment:
         APEX_DOMAIN: store.jwls.co
         HTTP_PROTOCOL: "https:"
@@ -61,29 +30,13 @@
         MOTHERSHIP_ADMIN_USERNAME: admin@jwls.co
         MOTHERSHIP_ADMIN_PASSWORD: ChangeThisPassword123!
         MOTHERSHIP_PORT: 8090
-        MOTHERSHIP_SEMVER: "0.22.*"
         NODE_ENV: production
         PH_HOME: /home/pockethost/.pockethost
         DATA_ROOT: /data
         DAEMON_PORT: 3000
-        DAEMON_PB_IDLE_TTL: 300000
-        PH_FTP_PORT: 21
-        PH_FTP_PASV_IP: 0.0.0.0
-        PH_FTP_PASV_PORT_MIN: 10000
-        PH_FTP_PASV_PORT_MAX: 11000
         SSL_KEY: /home/pockethost/.pockethost/ssl/tls.key
         SSL_CERT: /home/pockethost/.pockethost/ssl/tls.cert
         DOCKER_CONTAINER_HOST: host.docker.internal
-        DEBUG: "false"
-        PH_DEBUG: "false"
-        TRACE: "false"
-
-      healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
-        start_period: 300s
 
   volumes:
     pockethost_app:
