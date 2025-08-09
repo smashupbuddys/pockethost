@@ -5,67 +5,82 @@
       restart: unless-stopped
       privileged: true
       working_dir: /app
-      command: sh -c 'apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates && npm install -g pnpm@9 tsx && git clone https://github.com/pockethost/pockethost.git /app
-  2>/dev/null || (cd /app && git pull) && cd /app && pnpm install --no-frozen-lockfile && mkdir -p /data /home/pockethost/.pockethost/ssl && openssl req -x509 -newkey rsa:4096 -keyout
-  /home/pockethost/.pockethost/ssl/tls.key -out /home/pockethost/.pockethost/ssl/tls.cert -days 365 -nodes -subj "/CN=*.store.jwls.co" 2>/dev/null || true && cd /app/packages/pockethost &&
-  NODE_ENV=production tsx ./src/cli/index.ts serve'
+
+      command: |
+        sh -c '
+          echo "Installing system dependencies..."
+          apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates
+
+          echo "Installing Node.js global packages..."
+          npm install -g pnpm@9 tsx
+
+          echo "Cloning or updating PocketHost repository..."
+          if [ ! -d "/app/.git" ]; then
+            git clone https://github.com/pockethost/pockethost.git /app
+          else
+            cd /app && git pull origin main
+          fi
+
+          echo "Installing Node dependencies..."
+          cd /app
+          pnpm install --frozen-lockfile
+
+          echo "Creating required directories..."
+          mkdir -p /data /home/pockethost/.pockethost /home/pockethost/.pockethost/ssl
+
+          echo "Generate temporary SSL certs for internal use..."
+          if [ ! -f "/home/pockethost/.pockethost/ssl/tls.key" ]; then
+            openssl req -x509 -newkey rsa:4096 \
+              -keyout /home/pockethost/.pockethost/ssl/tls.key \
+              -out /home/pockethost/.pockethost/ssl/tls.cert \
+              -days 365 -nodes \
+              -subj "/C=US/ST=State/L=City/O=JWLS/CN=*.store.jwls.co"
+          fi
+
+          echo "Starting PocketHost server..."
+          cd /app/packages/pockethost
+          NODE_ENV=production tsx ./src/cli/index.ts serve
+        '
+
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
         - pockethost_app:/app
         - pockethost_data:/data
         - pockethost_home:/home/pockethost/.pockethost
+
       expose:
         - "80"
         - "443"
         - "8090"
         - "3000"
+
       environment:
-        APEX_DOMAIN: store.jwls.co
-        HTTP_PROTOCOL: "https:"
-        MOTHERSHIP_NAME: pockethost-central
+        APEX_DOMAIN: ${APEX_DOMAIN}
+        HTTP_PROTOCOL: ${HTTP_PROTOCOL}
+        MOTHERSHIP_NAME: ${MOTHERSHIP_NAME}
         MOTHERSHIP_ADMIN_USERNAME: ${MOTHERSHIP_ADMIN_USERNAME}
         MOTHERSHIP_ADMIN_PASSWORD: ${MOTHERSHIP_ADMIN_PASSWORD}
-        MOTHERSHIP_PORT: 8090
-        NODE_ENV: production
-        PH_HOME: /home/pockethost/.pockethost
-        DATA_ROOT: /data
-        DAEMON_PORT: 3000
-        DAEMON_PB_IDLE_TTL: 300000
-        SSL_KEY: /home/pockethost/.pockethost/ssl/tls.key
-        SSL_CERT: /home/pockethost/.pockethost/ssl/tls.cert
-        DOCKER_CONTAINER_HOST: host.docker.internal
-        DEBUG: "false"
+        MOTHERSHIP_PORT: ${MOTHERSHIP_PORT}
+        MOTHERSHIP_SEMVER: "0.22.*"
+        NODE_ENV: ${NODE_ENV}
+        PH_HOME: ${PH_HOME}
+        DATA_ROOT: ${DATA_ROOT}
+        DAEMON_PORT: ${DAEMON_PORT}
+        DAEMON_PB_IDLE_TTL: ${DAEMON_PB_IDLE_TTL}
+        SSL_KEY: ${SSL_KEY}
+        SSL_CERT: ${SSL_CERT}
+        DOCKER_CONTAINER_HOST: ${DOCKER_CONTAINER_HOST}
+        MOTHERSHIP_CLOUDFLARE_API_TOKEN: ${MOTHERSHIP_CLOUDFLARE_API_TOKEN}
+        MOTHERSHIP_CLOUDFLARE_ZONE_ID: ${MOTHERSHIP_CLOUDFLARE_ZONE_ID}
+        MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID: ${MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID}
+        DEBUG: ${DEBUG}
+        PH_DEBUG: ${DEBUG}
+        TRACE: "false"
 
-  Note: No volumes: section at the bottom - Docker will create them automatically.
-
-  Alternative: Download Pre-made File
-
-  Instead of editing in GitHub, download this ready-made file:
-
-  1. Delete your current docker-compose.yml in GitHub
-  2. Create a new file called docker-compose.yml
-  3. Copy this EXACTLY (no extra spaces):
-
-  version: "3"
-  services:
-    app:
-      image: node:20-alpine
-      container_name: pockethost
-      restart: unless-stopped
-      privileged: true
-      command: sh -c 'apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates && npm i -g pnpm@9 tsx && git clone https://github.com/pockethost/pockethost.git /app 2>/dev/null
-   || cd /app && cd /app && pnpm i && mkdir -p /data /ssl && openssl req -x509 -newkey rsa:4096 -keyout /ssl/tls.key -out /ssl/tls.cert -days 365 -nodes -subj "/CN=*.store.jwls.co" && cd
-  /app/packages/pockethost && tsx src/cli/index.ts serve'
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-        - ./data:/data
-        - ./ssl:/ssl
-      environment:
-        APEX_DOMAIN: store.jwls.co
-        MOTHERSHIP_ADMIN_USERNAME: admin@jwls.co
-        MOTHERSHIP_ADMIN_PASSWORD: ${MOTHERSHIP_ADMIN_PASSWORD}
-        NODE_ENV: production
-        DATA_ROOT: /data
-        PH_HOME: /data
-        SSL_KEY: /ssl/tls.key
-        SSL_CERT: /ssl/tls.cert
+  volumes:
+    pockethost_app:
+      driver: local
+    pockethost_data:
+      driver: local
+    pockethost_home:
+      driver: local
