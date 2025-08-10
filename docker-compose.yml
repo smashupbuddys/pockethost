@@ -1,3 +1,4 @@
+
   services:
     pockethost:
       image: node:20-alpine
@@ -55,26 +56,27 @@
         - "3000"
 
       environment:
-        APEX_DOMAIN: ${APEX_DOMAIN}
-        HTTP_PROTOCOL: ${HTTP_PROTOCOL}
-        MOTHERSHIP_NAME: ${MOTHERSHIP_NAME}
-        MOTHERSHIP_ADMIN_USERNAME: ${MOTHERSHIP_ADMIN_USERNAME}
-        MOTHERSHIP_ADMIN_PASSWORD: ${MOTHERSHIP_ADMIN_PASSWORD}
-        MOTHERSHIP_PORT: ${MOTHERSHIP_PORT}
+        APEX_DOMAIN: "store.jwls.co"
+        HTTP_PROTOCOL: "https:"
+        MOTHERSHIP_NAME: "pockethost-central"
+        MOTHERSHIP_ADMIN_USERNAME: "admin@jwls.co"
+        MOTHERSHIP_ADMIN_PASSWORD: "ChooseAStrongPassword123!"
+        MOTHERSHIP_PORT: "8090"
         MOTHERSHIP_SEMVER: "0.22.*"
-        NODE_ENV: ${NODE_ENV}
-        PH_HOME: ${PH_HOME}
-        DATA_ROOT: ${DATA_ROOT}
-        DAEMON_PORT: ${DAEMON_PORT}
-        DAEMON_PB_IDLE_TTL: ${DAEMON_PB_IDLE_TTL}
-        SSL_KEY: ${SSL_KEY}
-        SSL_CERT: ${SSL_CERT}
-        DOCKER_CONTAINER_HOST: ${DOCKER_CONTAINER_HOST}
-        MOTHERSHIP_CLOUDFLARE_API_TOKEN: ${MOTHERSHIP_CLOUDFLARE_API_TOKEN}
-        MOTHERSHIP_CLOUDFLARE_ZONE_ID: ${MOTHERSHIP_CLOUDFLARE_ZONE_ID}
-        MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID: ${MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID}
-        DEBUG: ${DEBUG}
-        PH_DEBUG: ${DEBUG}
+        NODE_ENV: "production"
+        PH_HOME: "/home/pockethost/.pockethost"
+        DATA_ROOT: "/data"
+        DAEMON_PORT: "3000"
+        DAEMON_PB_IDLE_TTL: "300000"
+        SSL_KEY: "/home/pockethost/.pockethost/ssl/tls.key"
+        SSL_CERT: "/home/pockethost/.pockethost/ssl/tls.cert"
+        DOCKER_CONTAINER_HOST: "host.docker.internal"
+        TEST_EMAIL: "test@store.jwls.co"
+        MOTHERSHIP_CLOUDFLARE_API_TOKEN: ""
+        MOTHERSHIP_CLOUDFLARE_ZONE_ID: ""
+        MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID: ""
+        DEBUG: "false"
+        PH_DEBUG: "false"
         TRACE: "false"
 
   volumes:
