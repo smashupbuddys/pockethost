@@ -1,4 +1,3 @@
-
   services:
     pockethost:
       image: node:20-alpine
@@ -10,7 +9,7 @@
       command: |
         sh -c '
           echo "Installing system dependencies..."
-          apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates
+          apk add --no-cache git bash docker-cli openssl curl python3 make g++ ca-certificates wget unzip
 
           echo "Installing Node.js global packages..."
           npm install -g pnpm@9 tsx
@@ -28,6 +27,7 @@
 
           echo "Creating required directories..."
           mkdir -p /data /home/pockethost/.pockethost /home/pockethost/.pockethost/ssl
+          mkdir -p /data/mothership/pb_data
 
           echo "Generate temporary SSL certs for internal use..."
           if [ ! -f "/home/pockethost/.pockethost/ssl/tls.key" ]; then
@@ -36,6 +36,20 @@
               -out /home/pockethost/.pockethost/ssl/tls.cert \
               -days 365 -nodes \
               -subj "/C=US/ST=State/L=City/O=JWLS/CN=*.store.jwls.co"
+          fi
+
+          echo "Download and setup PocketBase for migrations..."
+          if [ ! -f "/tmp/pocketbase" ]; then
+            wget -q https://github.com/pocketbase/pocketbase/releases/download/v0.22.22/pocketbase_0.22.22_linux_amd64.zip -O /tmp/pb.zip
+            unzip -q /tmp/pb.zip -d /tmp
+          fi
+
+          echo "Initialize Mothership database if needed..."
+          if [ ! -f "/data/mothership/pb_data/data.db" ]; then
+            echo "First run - initializing database..."
+            /tmp/pocketbase migrate up \
+              --dir /data/mothership/pb_data \
+              --migrationsDir /app/packages/pockethost/src/mothership-app/pb_migrations || true
           fi
 
           echo "Starting PocketHost server..."
@@ -66,15 +80,13 @@
         NODE_ENV: "production"
         PH_HOME: "/home/pockethost/.pockethost"
         DATA_ROOT: "/data"
+        MOTHERSHIP_DATA_ROOT: "/data/mothership"
         DAEMON_PORT: "3000"
         DAEMON_PB_IDLE_TTL: "300000"
         SSL_KEY: "/home/pockethost/.pockethost/ssl/tls.key"
         SSL_CERT: "/home/pockethost/.pockethost/ssl/tls.cert"
         DOCKER_CONTAINER_HOST: "host.docker.internal"
         TEST_EMAIL: "test@store.jwls.co"
-        MOTHERSHIP_CLOUDFLARE_API_TOKEN: ""
-        MOTHERSHIP_CLOUDFLARE_ZONE_ID: ""
-        MOTHERSHIP_CLOUDFLARE_ACCOUNT_ID: ""
         DEBUG: "false"
         PH_DEBUG: "false"
         TRACE: "false"
